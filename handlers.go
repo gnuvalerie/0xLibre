@@ -9,7 +9,7 @@ import (
 	"os"
 	"path"
 	"strings"
-
+        "mime"
 	"github.com/golang/glog"
 )
 
@@ -36,7 +36,6 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Bad request. Error retrieving file.")
 		return
 	}
-
 	_, err = os.Stat(filepath)
 	for !os.IsNotExist(err) {
 		uuid = GenerateUUID()
@@ -78,32 +77,33 @@ func upload(w http.ResponseWriter, r *http.Request) {
 
 func getFile(w http.ResponseWriter, r *http.Request) {
 	glog.Info("Retrieve request received")
-	var uuid string = strings.Replace(r.URL.Path[1:], "/", "", -1)
-	var path string = fmt.Sprintf("./storage/%s/", uuid)
+	uuid := strings.Replace(r.URL.Path[1:], "/", "", -1)
+	dirPath := fmt.Sprintf("./storage/%s", uuid)
 
-	glog.Infof(`Route "%s"`, r.URL.Path)
-	glog.Infof(`Retrieving UUID "%s"`, uuid)
-	glog.Infof(`Retrieving Path "%s"`, path)
-
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		glog.Errorf(`Error walking filepath "%s"`, path)
-		glog.Errorf("Error: %s", err.Error())
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "File Not Found.")
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil || len(files) == 0 {
+		glog.Errorf(`File not found: %s`, dirPath)
+		http.Error(w, "File Not Found.", http.StatusNotFound)
 		return
 	}
 
-	if len(files) <= 0 {
-		glog.Errorf(`No files in directory "%s"`, path)
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "File Not Found.")
-		return
+	filename := files[0].Name()
+	filePath := path.Join(dirPath, filename)
+
+	ext := path.Ext(filename)
+	mtype := mime.TypeByExtension(ext)
+	if mtype == "" {
+		mtype = "application/octet-stream"
 	}
 
-	var filename = files[0].Name()
-	glog.Infof(`Retrieving Filename "%s"`, fmt.Sprintf("./%s", filename))
+	if strings.HasPrefix(mtype, "text/") ||
+		strings.HasPrefix(mtype, "image/") ||
+		mtype == "application/pdf" {
+		w.Header().Set("Content-Disposition", `inline; filename="`+filename+`"`)
+	} else {
+		w.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
+	}
 
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
-	http.ServeFile(w, r, fmt.Sprintf("./%s/%s", path, filename))
+	w.Header().Set("Content-Type", mtype)
+	http.ServeFile(w, r, filePath)
 }
