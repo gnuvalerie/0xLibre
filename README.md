@@ -6,7 +6,7 @@ A lightweight, auditable pastebin-for-files service—designed for **privacy**, 
 
 - 📦 Zero external runtime deps (only Go stdlib + `glog`)  
   零外部运行时依赖（仅 Go 标准库 + `glog`）  
-- 🧾 Files stored on disk — no database  
+- 🧾 Files stored on disk, no database  
   文件直存磁盘，无需数据库  
 - 🔗 Short, random URLs (12-char UUID-like IDs)  
   短链接，12 位随机 ID  
