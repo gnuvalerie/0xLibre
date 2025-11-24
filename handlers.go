@@ -9,7 +9,7 @@ import (
 	"os"
 	"path"
 	"strings"
-        "mime"
+    "mime"
 	"github.com/golang/glog"
 )
 
